@@ -1,0 +1,47 @@
+# sbt / scala build output
+# bare "target/" (no leading slash) matches a directory named target at
+# ANY depth, so this alone covers target/, project/target/,
+# project/project/target/, project/project/project/target/, etc.
+target/
+
+# sbt/bloop/metals/bsp tooling artifacts
+.bloop/
+.bsp/
+.metals/
+metals.sbt
+
+# scala-cli
+.scala-build/
+
+# IDE
+.idea/
+.vscode/
+
+# claude code local session/tool state
+.claude/
+
+# OS / editor junk
+.DS_Store
+*.swp
+*~
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+# log files
+*.log
+
+# local env files
+.env
+.env.*
+
+# secret-shaped files
+*.pfx
+*.p12
+*.jks
+*.keystore
+*.key
+*.pem
+# but the CA certs under certs/ are public and required by the Docker build
+!certs/*.pem

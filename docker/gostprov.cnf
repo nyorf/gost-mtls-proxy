@@ -1,0 +1,14 @@
+openssl_conf = openssl_def
+[openssl_def]
+providers = provider_section
+[provider_section]
+default  = default_sect
+legacy   = legacy_sect
+gostprov = gostprov_sect
+[default_sect]
+activate = 1
+[legacy_sect]
+activate = 1
+[gostprov_sect]
+module   = /usr/local/lib/ossl-modules/gostprov.so
+activate = 1

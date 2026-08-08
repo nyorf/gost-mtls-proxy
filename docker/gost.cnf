@@ -1,0 +1,16 @@
+openssl_conf = openssl_init
+[openssl_init]
+providers = provider_sect
+engines   = engine_section
+[provider_sect]
+default = default_sect
+legacy  = legacy_sect
+[default_sect]
+activate = 1
+[legacy_sect]
+activate = 1
+[engine_section]
+gost = gost_section
+[gost_section]
+engine_id          = gost
+default_algorithms = ALL

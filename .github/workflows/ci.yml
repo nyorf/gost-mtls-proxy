@@ -1,0 +1,121 @@
+name: ci
+
+on:
+  push:
+    branches: ['**']
+    tags: ['release/v*', 'dev/v*']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # tags and the default branch publish images; never cancel those mid-push
+  cancel-in-progress: ${{ github.ref_type != 'tag' && github.ref_name != github.event.repository.default_branch }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - run: sbt scalafmtCheckAll scalafmtSbtCheck test
+
+  hadolint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hadolint/hadolint-action@v3.4.0
+        with:
+          dockerfile: ./Dockerfile
+
+  image-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: ci:${{ github.sha }}
+          build-args: |
+            CI_COMMIT=${{ github.sha }}
+            CI_REF=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ci:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+  publish:
+    needs: [test, hadolint, image-scan]
+    if: github.event_name == 'push' && (github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: write
+    # the secrets context is not allowed in a step-level if, so hoist it to env to gate on
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # docker hub is optional: unset secrets leave a fork publishing to ghcr only
+      - if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v4
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            name=ghcr.io/${{ github.repository }}
+            name=docker.io/${{ env.DOCKERHUB_USERNAME || 'unconfigured' }}/gost-mtls-proxy,enable=${{ env.DOCKERHUB_USERNAME != '' }}
+          # latest=auto would hand :latest to every match tag, dev/ included
+          flavor: latest=false
+          tags: |
+            type=ref,event=branch
+            type=match,pattern=^release/v(\d+\.\d+\.\d+(?:-[\w.]+)?)$,group=1
+            type=match,pattern=^release/v(\d+\.\d+)\.\d+$,group=1
+            type=match,pattern=^dev/v(\d+\.\d+\.\d+(?:-[\w.]+)?)$,group=1,suffix=-dev
+            type=sha,format=short,enable=${{ github.ref_type == 'branch' }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/release/v') && !contains(github.ref_name, '-') }}
+      # arm64 is qemu-emulated, long build
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            CI_COMMIT=${{ github.sha }}
+            CI_REF=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,15 @@
+**/target/
+**/.bloop/
+**/.bsp/
+**/.metals/
+**/.idea/
+**/.DS_Store
+.git/
+.gitignore
+.claude/
+**/*.pfx
+**/*.p12
+**/*.key
+**/*.env
+**/*.pem
+!certs/*.pem
