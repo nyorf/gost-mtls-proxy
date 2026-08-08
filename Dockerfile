@@ -12,9 +12,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 COPY patches/0001-cryptopro-keybag-empty-password.patch /tmp/
 
 # without the patch an empty-password pfx dies with a bare "Error outputting keys and certificates"
+WORKDIR /usr/src/gost-engine
+
 RUN set -eux; \
-    git clone https://github.com/gost-engine/engine.git /usr/src/gost-engine; \
-    cd /usr/src/gost-engine; \
+    git clone https://github.com/gost-engine/engine.git .; \
     git checkout "${GOST_ENGINE_COMMIT}"; \
     git submodule update --init --recursive; \
     patch -p1 < /tmp/0001-cryptopro-keybag-empty-password.patch; \
@@ -138,10 +139,10 @@ ENV LANG=C.UTF-8 \
     SSL_CERT_DIR=/etc/ssl/certs \
     PATH=/opt/jre/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-USER gostproxy
+USER 10001:10001
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -fsS "http://127.0.0.1:${PORT:-8080}/healthz" || exit 1
+    CMD ["/bin/sh", "-c", "curl -fsS http://127.0.0.1:${PORT:-8080}/healthz || exit 1"]
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

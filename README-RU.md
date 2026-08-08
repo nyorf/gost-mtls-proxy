@@ -105,6 +105,8 @@ JVM не выполняет никакой работы с TLS.
 
 ## Быстрый старт
 
+**NOTE: запросы в этом документе используют ГОСТ API Т-Банка как пример целевого API. Справочник API — [здесь](https://developer.tbank.ru/docs/api/get-api-v-2-company).**
+
 ### Файл pfx без пароля
 
 1. Скопируйте ваш файл pfx в текущий каталог под именем `client.pfx`.
@@ -325,8 +327,8 @@ Engine и провайдер для одних и тех же алгоритмо
 | `russian-trusted-root-ca.pem` | Russian Trusted Root CA, RSA, от Минцифры России. |
 | `russian-trusted-sub-ca.pem` | Russian Trusted Sub CA 2022 года, RSA. |
 | `russian-trusted-sub-ca-2024.pem` | Russian Trusted Sub CA 2024 года, RSA. |
-| `russian-trusted-gost-root-ca.pem` | Russian Trusted Root CA, ГОСТ. |
-| `russian-trusted-gost-sub-ca.pem` | Russian Trusted Sub CA, ГОСТ. |
+| `russian-trusted-gost-root-ca.pem` | Минцифры России НУЦ корневой, ГОСТ. |
+| `russian-trusted-gost-sub-ca.pem` | Минцифры России НУЦ подчиненный, ГОСТ. |
 
 Сборка делает с этими файлами две вещи:
 
@@ -571,7 +573,6 @@ docker build -t gost-mtls-proxy .
 sbt scalafmtCheckAll scalafmtSbtCheck test
 ```
 
-В проекте 45 тестов.
 Сборка использует Scala 3.8.4 и sbt 1.12.15.
 Тесты не используют сертификат. Тесты не устанавливают соединение с целевым API.
 

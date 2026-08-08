@@ -1,5 +1,7 @@
 # gost-mtls-proxy
 
+The Russian version is in [README-RU.md](README-RU.md).
+
 A transparent proxy for an API that accepts only GOST TLS with a client certificate.
 
 ## What this proxy does
@@ -102,6 +104,8 @@ For a build from source:
 - A JDK 21 and sbt 1.12.15 for the tests on your machine. The image build does not use them.
 
 ## Quick start
+
+**NOTE: the requests in this document use T-Bank's GOST API as the example target API. See the [API reference](https://developer.tbank.ru/docs/api/get-api-v-2-company).**
 
 ### A pfx file with no password
 
@@ -567,7 +571,6 @@ The build has four stages:
 sbt scalafmtCheckAll scalafmtSbtCheck test
 ```
 
-The project has 45 tests.
 The build uses Scala 3.8.4 and sbt 1.12.15.
 The tests use no certificate. The tests make no connection to the target API.
 

@@ -55,7 +55,7 @@ jobs:
             CI_REF=${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - uses: aquasecurity/trivy-action@0.36.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ci:${{ github.sha }}
           format: table

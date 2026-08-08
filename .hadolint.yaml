@@ -1,0 +1,3 @@
+ignored:
+  # rolling ubuntu:24.04/26.04 bases drop superseded package versions on point releases, so pinning apt versions breaks builds instead of protecting them
+  - DL3008
