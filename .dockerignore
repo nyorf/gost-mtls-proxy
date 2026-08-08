@@ -13,3 +13,9 @@
 **/*.env
 **/*.pem
 !certs/*.pem
+
+# license/notice files the Dockerfile COPYs into /usr/share/doc/gost-mtls-proxy/
+# must reach the build context
+!LICENSE
+!NOTICE
+!THIRD-PARTY-NOTICES.md

@@ -481,13 +481,39 @@ line can hold at `LOG_LEVEL=DEBUG`.
 ### An example line
 
 ```json
-{"message":"Received http request","level":"INFO","@timestamp":"2026-08-07T09:14:22.203118+00:00","logger":"app.http","system":"gost-mtls-proxy","env":"prod","inst":"8f1c0d2e4a7b","ci":{"deployed_at":"2026-08-07T09:11:07.442015+00:00","commit":"9f2c1ab3d4e5f60718293a4b5c6d7e8f90a1b2c3","ref":"release/v1.0.0"},"request_id":"6b1f4a2c-9d3e-4f57-8a01-2c3d4e5f6071","trace-id":"4bf92f3577b34da6a3ce929d0e0e4736","span-id":"00f067aa0ba902b7","method":"GET","route":"/api/v2/company","path":"/api/v2/company","uri":"http://localhost:8080/api/v2/company","headers":["Host: localhost:8080","User-Agent: curl/8.5.0","Accept: */*","Authorization: ***"]}
+{
+    "@timestamp": "2026-08-07T09:14:22.203118+00:00",
+    "ci": {
+        "commit": "9f2c1ab3d4e5f60718293a4b5c6d7e8f90a1b2c3",
+        "deployed_at": "2026-08-07T09:11:07.442015+00:00",
+        "ref": "release/v1.0.0"
+    },
+    "env": "prod",
+    "headers": [
+        "Host: localhost:8080",
+        "User-Agent: curl/8.5.0",
+        "Accept: */*",
+        "Authorization: ***"
+    ],
+    "inst": "8f1c0d2e4a7b",
+    "level": "INFO",
+    "logger": "app.http",
+    "message": "Received http request",
+    "method": "GET",
+    "path": "/api/v2/company",
+    "request_id": "6b1f4a2c-9d3e-4f57-8a01-2c3d4e5f6071",
+    "route": "/api/v2/company",
+    "span-id": "00f067aa0ba902b7",
+    "system": "gost-mtls-proxy",
+    "trace-id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "uri": "http://localhost:8080/api/v2/company"
+}
 ```
 
 ## Security
 
 **WARNING: DO NOT MAKE THE PROXY PORT AVAILABLE ON AN UNTRUSTED NETWORK. THE CONTAINER HOLDS A CLIENT
-CERTIFICATE THAT IDENTIFIES YOUR ORGANIZATION. EVERY CALLER THAT REACHES THE PORT CAN USE THAT IDENTITY.**
+CERTIFICATE THAT IDENTIFIES YOU. EVERY CALLER THAT REACHES THE PORT CAN USE THAT IDENTITY.**
 
 **WARNING: SET `TLS_VERIFY=false` ONLY FOR A DEBUG SESSION. THE PROXY THEN ACCEPTS ANY CERTIFICATE FROM
 THE TARGET API. AN ATTACKER CAN THEN READ AND CHANGE YOUR TRAFFIC.**
@@ -578,3 +604,13 @@ The tests use no certificate. The tests make no connection to the target API.
 
 - `ghcr.io/nyorf/gost-mtls-proxy`
 - `docker.io/nyorf/gost-mtls-proxy`
+
+## Licensing
+
+This project is licensed under Apache-2.0. See the `LICENSE` file for the full text.
+
+The container image bundles third-party software. See `THIRD-PARTY-NOTICES.md` for the full list.
+
+stunnel is licensed under GPL-2.0-or-later. Its license text ships inside the image under `/usr/share/doc`.
+
+The CA certificates under `certs/` are public certificates.

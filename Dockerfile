@@ -87,6 +87,10 @@ RUN set -eux; \
 
 FROM ubuntu:24.04
 
+LABEL org.opencontainers.image.title="gost-mtls-proxy" \
+      org.opencontainers.image.description="mTLS-terminating proxy for Russian GOST TLS endpoints (stunnel + gost-engine, fronted by an http4s Scala app)" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
 ARG CI_COMMIT=""
 ARG CI_REF=""
 ENV CI_COMMIT=${CI_COMMIT} CI_REF=${CI_REF}
@@ -97,7 +101,9 @@ RUN set -eux; \
     DEBIAN_FRONTEND=noninteractive apt-get -y upgrade; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         stunnel4 openssl ca-certificates curl; \
-    rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/locale/* /var/cache/apt/* /var/lib/apt/lists/*; \
+    find /usr/share/doc -mindepth 1 ! -name copyright ! -type d -delete; \
+    find /usr/share/doc -mindepth 1 -type d -empty -delete; \
+    rm -rf /usr/share/man/* /usr/share/locale/* /var/cache/apt/* /var/lib/apt/lists/*; \
     find /var/log -type f -delete; \
     echo "" > /etc/apt/sources.list; \
     rm -rf /etc/apt/sources.list.d/*
@@ -124,6 +130,7 @@ RUN set -eux; \
 COPY --from=app /opt/app/gost-mtls-proxy.jar /opt/app/gost-mtls-proxy.jar
 COPY --from=app /opt/jre/ /opt/jre/
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY LICENSE THIRD-PARTY-NOTICES.md /usr/share/doc/gost-mtls-proxy/
 
 RUN set -eux; \
     chmod 0755 /usr/local/bin/entrypoint.sh; \

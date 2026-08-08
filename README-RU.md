@@ -482,13 +482,39 @@ stunnel пишет свою диагностику в stderr.
 ### Пример строки
 
 ```json
-{"message":"Received http request","level":"INFO","@timestamp":"2026-08-07T09:14:22.203118+00:00","logger":"app.http","system":"gost-mtls-proxy","env":"prod","inst":"8f1c0d2e4a7b","ci":{"deployed_at":"2026-08-07T09:11:07.442015+00:00","commit":"9f2c1ab3d4e5f60718293a4b5c6d7e8f90a1b2c3","ref":"release/v1.0.0"},"request_id":"6b1f4a2c-9d3e-4f57-8a01-2c3d4e5f6071","trace-id":"4bf92f3577b34da6a3ce929d0e0e4736","span-id":"00f067aa0ba902b7","method":"GET","route":"/api/v2/company","path":"/api/v2/company","uri":"http://localhost:8080/api/v2/company","headers":["Host: localhost:8080","User-Agent: curl/8.5.0","Accept: */*","Authorization: ***"]}
+{
+    "@timestamp": "2026-08-07T09:14:22.203118+00:00",
+    "ci": {
+        "commit": "9f2c1ab3d4e5f60718293a4b5c6d7e8f90a1b2c3",
+        "deployed_at": "2026-08-07T09:11:07.442015+00:00",
+        "ref": "release/v1.0.0"
+    },
+    "env": "prod",
+    "headers": [
+        "Host: localhost:8080",
+        "User-Agent: curl/8.5.0",
+        "Accept: */*",
+        "Authorization: ***"
+    ],
+    "inst": "8f1c0d2e4a7b",
+    "level": "INFO",
+    "logger": "app.http",
+    "message": "Received http request",
+    "method": "GET",
+    "path": "/api/v2/company",
+    "request_id": "6b1f4a2c-9d3e-4f57-8a01-2c3d4e5f6071",
+    "route": "/api/v2/company",
+    "span-id": "00f067aa0ba902b7",
+    "system": "gost-mtls-proxy",
+    "trace-id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "uri": "http://localhost:8080/api/v2/company"
+}
 ```
 
 ## Безопасность
 
 **WARNING: НЕ ОТКРЫВАЙТЕ ПОРТ ПРОКСИ В НЕДОВЕРЕННОЙ СЕТИ. КОНТЕЙНЕР СОДЕРЖИТ КЛИЕНТСКИЙ СЕРТИФИКАТ,
-КОТОРЫЙ ИДЕНТИФИЦИРУЕТ ВАШУ ОРГАНИЗАЦИЮ. КАЖДАЯ ВЫЗЫВАЮЩАЯ СТОРОНА С ДОСТУПОМ К ПОРТУ МОЖЕТ
+КОТОРЫЙ ИДЕНТИФИЦИРУЕТ ВАC. КАЖДАЯ ВЫЗЫВАЮЩАЯ СТОРОНА С ДОСТУПОМ К ПОРТУ МОЖЕТ
 ДЕЙСТВОВАТЬ ОТ ЭТОГО ИМЕНИ.**
 
 **WARNING: ЗАДАВАЙТЕ `TLS_VERIFY=false` ТОЛЬКО ДЛЯ СЕАНСА ОТЛАДКИ. ТОГДА ПРОКСИ ПРИНИМАЕТ ЛЮБОЙ
@@ -580,3 +606,13 @@ sbt scalafmtCheckAll scalafmtSbtCheck test
 
 - `ghcr.io/nyorf/gost-mtls-proxy`
 - `docker.io/nyorf/gost-mtls-proxy`
+
+## Лицензия
+
+Проект распространяется по лицензии Apache-2.0. Полный текст лицензии — в файле `LICENSE`.
+
+Образ контейнера содержит стороннее ПО. Полный список — в файле `THIRD-PARTY-NOTICES.md`.
+
+stunnel распространяется по лицензии GPL-2.0-or-later. Текст лицензии находится внутри образа, в `/usr/share/doc`.
+
+Сертификаты CA в каталоге `certs/` — публичные сертификаты.
