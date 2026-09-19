@@ -318,12 +318,15 @@ The script gives both files to stunnel without a change.
 
 ## Trust store
 
-The repository holds 7 CA certificates in `certs/`:
+The repository holds 10 CA certificates in `certs/`:
 
 | File | Description |
 |---|---|
-| `cryptopro-gost-root-ca.pem` | CryptoPro GOST Root CA. |
+| `cryptopro-gost-root-ca.pem` | CryptoPro GOST Root CA of 2022. |
 | `cryptopro-tls-ca.pem` | CryptoPro TLS CA. |
+| `cryptopro-gost-root-ca-2025.pem` | CryptoPro GOST Root CA of 2025. |
+| `cryptopro-gost-root-ca-2025-cross-signed.pem` | CryptoPro GOST Root CA of 2025, cross-signed by the CryptoPro GOST Root CA of 2022. |
+| `cryptopro-gost-tls-ca.pem` | CryptoPro GOST TLS CA, issued by the CryptoPro GOST Root CA of 2025. |
 | `russian-trusted-root-ca.pem` | Russian Trusted Root CA, RSA, from Минцифры России. |
 | `russian-trusted-sub-ca.pem` | Russian Trusted Sub CA of 2022, RSA. |
 | `russian-trusted-sub-ca-2024.pem` | Russian Trusted Sub CA of 2024, RSA. |

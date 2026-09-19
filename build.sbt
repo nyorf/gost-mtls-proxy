@@ -1,5 +1,5 @@
 ThisBuild / scalaVersion := "3.8.4"
-ThisBuild / version := "1.0.0"
+ThisBuild / version := "1.0.1"
 
 lazy val http4sVersion = "0.23.36"
 lazy val circeVersion = "0.14.16"
