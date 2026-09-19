@@ -41,8 +41,13 @@ object Proxy:
     ci"Upgrade"
   )
 
-  def app(config: Config, client: Client[IO], log: JsonLog): HttpApp[IO] = HttpApp[IO]: request =>
-    if request.method == Method.GET && path(request) == HealthPath then health(config, log, request)
+  def app(
+      config: Config,
+      client: Client[IO],
+      log: JsonLog,
+      procNet: ProcNetSource = ProcNetSource.default
+  ): HttpApp[IO] = HttpApp[IO]: request =>
+    if request.method == Method.GET && path(request) == HealthPath then health(config, log, procNet, request)
     else handle(config, client, log, request)
 
   private def handle(config: Config, client: Client[IO], log: JsonLog, request: Request[IO]): IO[Response[IO]] =
@@ -251,7 +256,7 @@ object Proxy:
 
   // healthz never proxies anything, so it gets a reduced lifecycle (received + operation, no forward/relay lines)
   // logged at DEBUG only: log.debug is what makes it silent at every other level, not a call-site level check
-  private def health(config: Config, log: JsonLog, request: Request[IO]): IO[Response[IO]] =
+  private def health(config: Config, log: JsonLog, procNet: ProcNetSource, request: Request[IO]): IO[Response[IO]] =
     for
       ctx <- newContext(request)
       start <- IO.realTimeInstant
@@ -266,13 +271,30 @@ object Proxy:
           "headers" -> headersJson(request.headers)
         ) ++ debugObject(config, request))*
       )
-      reachable <- upstreamReachable(config)
+      reachable <- upstreamListening(config, log, procNet)
       end <- IO.monotonic
       response =
         if reachable then jsonResponse(Status.Ok, Json.obj("status" -> Json.fromString("ok")))
         else jsonResponse(Status.ServiceUnavailable, Json.obj("status" -> Json.fromString("upstream unreachable")))
       _ <- operation(config, log, request, ctx, response.status, start, (end - begin).toMillis, level = LogLevel.Debug)
     yield response
+
+  // a socket table read never touches the network, unlike a connect, which would make client-mode stunnel dial out
+  private def upstreamListening(config: Config, log: JsonLog, procNet: ProcNetSource): IO[Boolean] =
+    for
+      tcp4 <- procNet.tcp
+      tcp6 <- procNet.tcp6
+      listening <- (tcp4, tcp6) match
+        case (None, None) =>
+          val warn =
+            if procNet.unavailableWarned.compareAndSet(false, true) then
+              log.warn("app.health", "listen-state check unavailable (no /proc), falling back to tcp-connect", None)
+            else IO.unit
+          warn.flatMap(_ => upstreamReachable(config))
+        case _ =>
+          val port = config.upstreamPort
+          IO.pure(tcp4.exists(ProcNetTcp.hasListener(_, port)) || tcp6.exists(ProcNetTcp.hasListener(_, port)))
+    yield listening
 
   private def upstreamReachable(config: Config): IO[Boolean] =
     (IpHost.fromString(config.upstreamHost), Port.fromInt(config.upstreamPort))

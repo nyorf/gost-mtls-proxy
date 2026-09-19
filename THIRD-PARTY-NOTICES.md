@@ -6,16 +6,13 @@ third-party components under their own licenses. This file lists them,
 identifies which of them carry a copyleft obligation, and points at where to
 obtain their source.
 
-Facts below were established by running
-`dpkg-query -W -f='${Package}\t${Version}\n'` inside
-`ghcr.io/nyorf/gost-mtls-proxy:1.0.0`, and by installing the same packages
-from `ubuntu:24.04` in an unmodified container to read each package's
-`/usr/share/doc/<pkg>/copyright` file (the Dockerfile now preserves these
-files inside the shipped image itself — see below).
+This file identifies each package below from the image produced by this
+repository's `Dockerfile`. Each package's license comes from its own
+`/usr/share/doc/<pkg>/copyright` file, which the Dockerfile keeps inside
+the shipped image.
 
 ## 1. stunnel (copyleft — read this one)
 
-- **Version in the image:** `stunnel4 3:5.72-1build2` (Ubuntu 24.04 "noble")
 - **License:** GPL-2.0-or-later, with stunnel's own exception permitting
   linking against OpenSSL. Verified against the upstream license file:
   https://raw.githubusercontent.com/mtrojnar/stunnel/master/COPYING.md
@@ -26,14 +23,14 @@ files inside the shipped image itself — see below).
 - **Copyright:** (C) 1998-2026 Michal Trojnara, plus the Debian/Ubuntu
   packaging contributors listed in the package's own copyright file.
 - **Source for the exact binary shipped:** the Ubuntu "noble" source
-  package for this exact version, e.g.
-  `https://packages.ubuntu.com/noble/stunnel4` or
-  `https://launchpad.net/ubuntu/+source/stunnel4/5.72-1build2`, and
-  upstream at https://www.stunnel.org/downloads.html.
-- The full Debian copyright/license text for this exact package is
-  preserved in the image at `/usr/share/doc/stunnel4/copyright` (see the
-  Dockerfile change below); the GPL-2 text it refers to ships at
-  `/usr/share/doc/stunnel4/GPL-2` in the same image.
+  package, e.g. `https://packages.ubuntu.com/noble/stunnel4` or
+  `https://launchpad.net/ubuntu/+source/stunnel4`, and upstream at
+  https://www.stunnel.org/downloads.html. The exact version shipped is
+  recorded in the image's own `/usr/share/doc/stunnel4/copyright` file.
+- The image preserves this package's Debian copyright file at
+  `/usr/share/doc/stunnel4/copyright`. That file points to
+  `/usr/share/common-licenses/GPL-2` for the full GPL-2 text. The image
+  ships that file too.
 
 ## 2. gost-engine
 
@@ -55,28 +52,30 @@ into the image, both under **Apache License 2.0**:
 
 ## 3. OpenSSL, ca-certificates, curl (packages the Dockerfile installs explicitly)
 
-Exact versions, read from the running image:
+The Dockerfile installs these packages from a rolling `ubuntu:24.04` base.
+An exact version pinned here goes stale within weeks. This file lists the
+package name, license and source, not a version:
 
-| Package | Version | License | Source |
-|---|---|---|---|
-| `openssl` (CLI, linked against `libssl3t64`) | `3.0.13-0ubuntu3.12` | Apache-2.0 | https://www.openssl.org |
-| `ca-certificates` | `20260601~24.04.1` | GPL-2.0-or-later (packaging/scripts) + MPL-2.0 (bundled Mozilla `certdata.txt` CA bundle) | Debian/Ubuntu `ca-certificates` source package; CA data from Mozilla NSS |
-| `curl` | `8.5.0-2ubuntu10.11` | the "curl license" (MIT/ISC-style permissive; a small number of vendored files use BSD-3-Clause/ISC/OLDAP-2.8/FSFULLR) | https://curl.se |
+| Package | License | Source |
+|---|---|---|
+| `openssl` (CLI, linked against `libssl3t64`) | Apache-2.0 | https://www.openssl.org |
+| `ca-certificates` | GPL-2.0-or-later (packaging/scripts) + MPL-2.0 (bundled Mozilla `certdata.txt` CA bundle) | Debian/Ubuntu `ca-certificates` source package; CA data from Mozilla NSS |
+| `curl` | the "curl license" (MIT/ISC-style permissive; a small number of vendored files use BSD-3-Clause/ISC/OLDAP-2.8/FSFULLR) | https://curl.se |
 
-These are read directly from each package's `/usr/share/doc/<pkg>/copyright`
-in an `ubuntu:24.04` container (OpenSSL's copyright is a symlink to
-`libssl3t64`'s, per Debian's packaging convention). All three copyright
-files, with the full license text, are preserved in the shipped image (see
-the Dockerfile change below) at `/usr/share/doc/openssl/copyright`,
-`/usr/share/doc/ca-certificates/copyright`, and `/usr/share/doc/curl/copyright`.
+Each package's license comes from its own `/usr/share/doc/<pkg>/copyright`
+file (OpenSSL's copyright is a symlink to `libssl3t64`'s, per Debian's
+packaging convention). The Dockerfile keeps all three copyright files,
+with the full license text, inside the shipped image, at
+`/usr/share/doc/openssl/copyright`, `/usr/share/doc/ca-certificates/copyright`,
+and `/usr/share/doc/curl/copyright`. Read the copy in your own image. It
+names the exact version that image shipped.
 
 ### The rest of the Ubuntu 24.04 base
 
 The final stage is `ubuntu:24.04` with a security `apt-get upgrade`, which
 pulls in the standard minimal userland (`bash`, `coreutils`, `dpkg`,
-`libc6`, `perl`, `systemd` libraries, `util-linux`, and so on — see the full
-`dpkg-query` output captured during this change for the complete list of
-~120 packages). These are stock Ubuntu packages under their own upstream
+`libc6`, `perl`, `systemd` libraries, `util-linux`, and more). These are
+stock Ubuntu packages under their own upstream
 licenses (predominantly GPL-2/GPL-3/LGPL/BSD/MIT, varying by package) that
 this project neither modifies nor selects individually. Rather than
 transcribing all of them into this file (and risking it going stale across
@@ -89,7 +88,7 @@ any built image to enumerate them for that exact build.
 ## 4. The Java runtime
 
 The final image's JVM at `/opt/jre` is a custom runtime produced by `jlink`
-(from `openjdk-21-jdk-headless 21.0.11+10-1~24.04.2` on Ubuntu 24.04),
+(from the `openjdk-21-jdk-headless` package on Ubuntu 24.04),
 trimmed to only the modules `gost-mtls-proxy.jar` actually uses. OpenJDK is
 licensed under the **GNU General Public License, version 2, with the
 Classpath Exception** (the Classpath Exception is what allows an

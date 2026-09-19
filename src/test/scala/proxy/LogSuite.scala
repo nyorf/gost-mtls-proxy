@@ -194,7 +194,7 @@ final class LogSuite extends CatsEffectSuite:
       .use: port =>
         val lines = new LogLines
         val cfg = config(port)
-        send(cfg, logger(cfg, lines), Request[IO](Method.GET, uri"/healthz")).as(lines)
+        send(cfg, logger(cfg, lines), Request[IO](Method.GET, uri"/healthz"), listeningProcNet(port)).as(lines)
       .map(lines => assertEquals(lines.raw, Nil))
   }
 
@@ -351,7 +351,7 @@ final class LogSuite extends CatsEffectSuite:
       .use: port =>
         val lines = new LogLines
         val cfg = config(port, "LOG_LEVEL" -> "DEBUG")
-        send(cfg, logger(cfg, lines), Request[IO](Method.GET, uri"/healthz")).as(lines)
+        send(cfg, logger(cfg, lines), Request[IO](Method.GET, uri"/healthz"), listeningProcNet(port)).as(lines)
       .map: lines =>
         assertEquals(
           lines.parsed.map(_.hcursor.get[String]("message").toOption.get),

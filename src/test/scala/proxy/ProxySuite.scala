@@ -215,6 +215,55 @@ final class ProxySuite extends CatsEffectSuite:
       assertEquals(dead.text, """{"status":"upstream unreachable"}""")
   }
 
+  private val notListeningTable: String =
+    "   0: 0100007F:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000 0 0 1 1 0 0 0 0 0"
+
+  test("healthz returns 200 from the injected proc-net source even when the real port is dead") {
+    closedPort
+      .flatMap: port =>
+        val cfg = config(port)
+        send(cfg, silent(cfg), Request[IO](Method.GET, uri"/healthz"), listeningProcNet(port))
+      .map: result =>
+        assertEquals(result.status, Status.Ok)
+        assertEquals(result.text, """{"status":"ok"}""")
+  }
+
+  test("healthz returns 503 from the injected proc-net source even when the real port is open") {
+    upstream(HttpApp.notFound[IO])
+      .use: port =>
+        val cfg = config(port)
+        val procNet = ProcNetSource(IO.pure(Some(notListeningTable)), IO.pure(Some(notListeningTable)))
+        send(cfg, silent(cfg), Request[IO](Method.GET, uri"/healthz"), procNet)
+      .map: result =>
+        assertEquals(result.status, Status.ServiceUnavailable)
+        assertEquals(result.text, """{"status":"upstream unreachable"}""")
+  }
+
+  test(
+    "healthz falls back to a tcp connect on every check but logs the unavailable warning only once per process"
+  ) {
+    val lines = new LogLines
+    for
+      first <- upstream(HttpApp.notFound[IO]).use: port =>
+        val cfg = config(port)
+        send(cfg, logger(cfg, lines), Request[IO](Method.GET, uri"/healthz"), unavailableProcNet)
+      firstWarned = lines.withMessage("listen-state check unavailable (no /proc), falling back to tcp-connect")
+      second <- closedPort.flatMap: port =>
+        val cfg = config(port)
+        send(cfg, logger(cfg, lines), Request[IO](Method.GET, uri"/healthz"), unavailableProcNet)
+      third <- upstream(HttpApp.notFound[IO]).use: port =>
+        val cfg = config(port)
+        send(cfg, logger(cfg, lines), Request[IO](Method.GET, uri"/healthz"), unavailableProcNet)
+    yield
+      // the fallback itself still runs (and answers correctly) on every check, only the log line is deduped
+      assertEquals(first.status, Status.Ok)
+      assertEquals(second.status, Status.ServiceUnavailable)
+      assertEquals(third.status, Status.Ok)
+      assertEquals(firstWarned.length, 1)
+      val warned = lines.withMessage("listen-state check unavailable (no /proc), falling back to tcp-connect")
+      assertEquals(warned.length, 1)
+  }
+
   test("answers 502 when the upstream refuses the connection") {
     closedPort
       .flatMap: port =>

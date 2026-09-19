@@ -88,8 +88,6 @@ The final stage of the image starts from `ubuntu:24.04`. The build hardens that 
 - The build makes a trimmed JRE with jlink. The module set is `java.base`, `java.management` and `jdk.unsupported`.
 - The container starts as the non-root user `gostproxy`.
 
-The image size is approximately 244 MB.
-
 ## Necessary software
 
 For a container from the published image:
@@ -373,10 +371,17 @@ docker run --rm -p 8080:8080 \
 
 The proxy answers `GET /healthz` with JSON:
 
-- The proxy opens a TCP connection to the local stunnel port. The timeout is 1 second.
-- A good connection gives status 200 and the body `{"status":"ok"}`.
-- A bad connection gives status 503 and the body `{"status":"upstream unreachable"}`.
-- `/healthz` writes no log lines.
+- The proxy reads `/proc/net/tcp` and `/proc/net/tcp6`. It looks for a socket in the `LISTEN`
+  state on `UPSTREAM_PORT`.
+- This is a read of the kernel socket table. The check sends nothing to the target API.
+- The proxy answers 200 with the body `{"status":"ok"}` when either table shows a listening socket.
+- The proxy answers 503 with the body `{"status":"upstream unreachable"}` when neither table shows
+  one.
+- The proxy falls back to a TCP connection when neither file can be read. This can happen on a
+  non-Linux host or in a restricted environment.
+- The fallback connects to the local stunnel port. The timeout is 1 second. The proxy also writes
+  one `WARNING` line.
+- `/healthz` writes no other log lines.
 - `PROXY_TOKEN` does not apply to `/healthz`.
 
 The image also holds a `HEALTHCHECK` instruction for this path.
@@ -453,7 +458,7 @@ line can hold at `LOG_LEVEL=DEBUG`.
   A `text` or a `multipart` body also renders as text, instead of the empty string it gets at every other level.
   The headers and the JSON keys below still become `***`. A body above `LOG_BODY_MAX_BYTES` is still `unread`
   and is never buffered, at every level.
-- `GET /healthz`, silent at every other level, emits `Received http request` and `api operation executed` at DEBUG.
+- `GET /healthz` stays silent at every other level, apart from the fallback `WARNING` line. It also emits `Received http request` and `api operation executed` at DEBUG.
 
 `LOG_BODIES=false` still wins over `LOG_LEVEL=DEBUG`: an explicit body opt-out is respected at every level.
 
@@ -489,7 +494,7 @@ line can hold at `LOG_LEVEL=DEBUG`.
     "ci": {
         "commit": "9f2c1ab3d4e5f60718293a4b5c6d7e8f90a1b2c3",
         "deployed_at": "2026-08-07T09:11:07.442015+00:00",
-        "ref": "release/v1.0.0"
+        "ref": "release/v1.1.0"
     },
     "env": "prod",
     "headers": [
