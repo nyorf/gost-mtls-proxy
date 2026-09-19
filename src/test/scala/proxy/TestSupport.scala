@@ -70,16 +70,28 @@ object TestSupport:
   def silent(config: Config): JsonLog = logger(config, new LogLines)
 
   // drives the proxy directly so tests own the exact inbound headers; the upstream hop is a real ember client
-  def send(config: Config, log: JsonLog, request: Request[IO]): IO[Result] =
+  def send(
+      config: Config,
+      log: JsonLog,
+      request: Request[IO],
+      procNet: ProcNetSource = ProcNetSource.default
+  ): IO[Result] =
     EmberClientBuilder
       .default[IO]
       .withoutUserAgent
       .build
       .use: client =>
         Proxy
-          .app(config, client, log)
+          .app(config, client, log, procNet)
           .run(request)
           .flatMap(response => response.body.compile.to(Array).map(Result(response.status, response.headers, _)))
 
   // a port nothing listens on: bound to learn a free one, then released
   val closedPort: IO[Int] = upstream(HttpApp.notFound[IO]).use(IO.pure)
+
+  // a fabricated /proc/net/tcp table reporting the given port as LISTEN, for tests that must not depend on a real kernel table
+  def listeningProcNet(port: Int): ProcNetSource =
+    val row = f"   0: 0100007F:$port%04X 00000000:0000 0A 00000000:00000000 00:00000000 00000000 0 0 1 1 0 0 0 0 0"
+    ProcNetSource(IO.pure(Some(row)), IO.pure(None))
+
+  val unavailableProcNet: ProcNetSource = ProcNetSource(IO.pure(None), IO.pure(None))
