@@ -318,12 +318,15 @@ Engine и провайдер для одних и тех же алгоритмо
 
 ## Хранилище доверенных сертификатов
 
-Репозиторий содержит 7 сертификатов CA в `certs/`:
+Репозиторий содержит 10 сертификатов CA в `certs/`:
 
 | Файл | Описание |
 |---|---|
-| `cryptopro-gost-root-ca.pem` | CryptoPro GOST Root CA. |
+| `cryptopro-gost-root-ca.pem` | CryptoPro GOST Root CA 2022 года. |
 | `cryptopro-tls-ca.pem` | CryptoPro TLS CA. |
+| `cryptopro-gost-root-ca-2025.pem` | CryptoPro GOST Root CA 2025 года. |
+| `cryptopro-gost-root-ca-2025-cross-signed.pem` | CryptoPro GOST Root CA 2025 года, кросс-подписанный CryptoPro GOST Root CA 2022 года. |
+| `cryptopro-gost-tls-ca.pem` | CryptoPro GOST TLS CA, выпущенный CryptoPro GOST Root CA 2025 года. |
 | `russian-trusted-root-ca.pem` | Russian Trusted Root CA, RSA, от Минцифры России. |
 | `russian-trusted-sub-ca.pem` | Russian Trusted Sub CA 2022 года, RSA. |
 | `russian-trusted-sub-ca-2024.pem` | Russian Trusted Sub CA 2024 года, RSA. |
