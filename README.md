@@ -55,12 +55,11 @@ The JVM does no TLS work at all.
 ### The GOST algorithms
 
 The standard OpenSSL build has no GOST algorithms.
-The image adds them with two separate builds of gost-engine:
+The image adds them with one build of gost-engine v3.0.5, commit `09fdd535fae018815651f34af6462fc280c3002e`.
+The build makes two modules:
 
-- The Dockerfile builds gost-engine v3.0.3 from source in engine mode.
-  stunnel uses this build for every TLS connection.
-- The Dockerfile builds gost-engine master, commit `3dd0f0e4299489a537398cfa4d9daad260ac87a8`, in provider mode.
-  Only this build reads a CryptoPro pfx file.
+- `gost.so` in engine mode. stunnel uses this module for every TLS connection.
+- `gostprov.so` in provider mode. The entrypoint script reads a CryptoPro pfx file with this module.
 
 ### The startup sequence
 
@@ -81,7 +80,7 @@ The owner is the non-root user `gostproxy` with uid 10001.
 
 ### The image
 
-The final stage of the image starts from `ubuntu:24.04`. The build hardens that stage:
+The final stage of the image starts from `ubuntu:26.04`. The build hardens that stage:
 
 - The build empties both apt source mechanisms. The final image cannot install a package at runtime.
 - The build removes the documents, the manual pages and the locales.
@@ -99,7 +98,7 @@ For a container from the published image:
 For a build from source:
 
 - podman or docker with network access. The build downloads gost-engine and sbt.
-- A JDK 21 and sbt 1.12.15 for the tests on your machine. The image build does not use them.
+- A JDK 25 and sbt 2.0.11 for the tests on your machine. The image build does not use them.
 
 ## Quick start
 
@@ -296,7 +295,7 @@ The OID is `1.2.840.113549.1.12.1.80`.
 A standard OpenSSL build cannot read a pfx file of that type.
 BouncyCastle cannot read it either.
 
-The image therefore holds a second build of gost-engine in provider mode.
+The image therefore holds the provider module of gost-engine, `gostprov.so`.
 The patch `patches/0001-cryptopro-keybag-empty-password.patch` adds support for an empty password.
 Without that patch a pfx file with an empty password stops the conversion.
 
@@ -494,7 +493,7 @@ line can hold at `LOG_LEVEL=DEBUG`.
     "ci": {
         "commit": "9f2c1ab3d4e5f60718293a4b5c6d7e8f90a1b2c3",
         "deployed_at": "2026-08-07T09:11:07.442015+00:00",
-        "ref": "release/v1.1.0"
+        "ref": "release/v1.2.0"
     },
     "env": "prod",
     "headers": [
@@ -591,21 +590,20 @@ Network access is necessary for the build.
 The build clones gost-engine from GitHub and downloads sbt.
 The build also checks the SHA-256 sum of the sbt archive.
 
-The build has four stages:
+The build has three stages:
 
-1. `gostprov` builds `gostprov.so` from gost-engine master on `ubuntu:26.04`. The cmake floor of master is
+1. `gost` builds `gost.so` and `gostprov.so` from gost-engine v3.0.5 on `ubuntu:26.04`. The cmake floor of v3.0.5 is
    OpenSSL 3.4, and `ubuntu:26.04` has the necessary headers.
-2. `engine` builds `gost.so` from gost-engine v3.0.3 on `ubuntu:24.04`.
-3. `app` builds the assembly jar with sbt. Then jlink makes the trimmed JRE.
-4. The final stage joins all parts on `ubuntu:24.04`.
+2. `app` builds the assembly jar with sbt. Then jlink makes the trimmed JRE.
+3. The final stage joins all parts on `ubuntu:26.04`.
 
 ### Tests on your machine
 
 ```bash
-sbt scalafmtCheckAll scalafmtSbtCheck test
+sbt "scalafmtCheckAll; scalafmtSbtCheck; testFull"
 ```
 
-The build uses Scala 3.8.4 and sbt 1.12.15.
+The build uses Scala 3.10.0 and sbt 2.0.11.
 The tests use no certificate. The tests make no connection to the target API.
 
 ### Container registries

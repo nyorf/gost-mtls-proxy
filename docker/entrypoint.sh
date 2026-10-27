@@ -170,4 +170,5 @@ export UPSTREAM_HOST=127.0.0.1
 export UPSTREAM_PORT=$upstream_port
 
 log "starting proxy"
-exec /opt/jre/bin/java -XX:+ExitOnOutOfMemoryError -jar /opt/app/gost-mtls-proxy.jar
+# scala's lazy vals reach sun.misc.Unsafe, which the jdk otherwise warns about on stderr ahead of the json log
+exec /opt/jre/bin/java --sun-misc-unsafe-memory-access=allow -XX:+ExitOnOutOfMemoryError -jar /opt/app/gost-mtls-proxy.jar

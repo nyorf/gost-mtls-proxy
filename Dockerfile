@@ -1,9 +1,10 @@
-# gostprov.so, provider mode, gost-engine master. only this build reads the CryptoPro
-# proprietary pkcs12 PBE (1.2.840.113549.1.12.1.80). master's cmake floor is OpenSSL 3.4,
-# so it is built on 26.04 (3.5.x headers) and used on noble only for the one-shot conversion.
-FROM ubuntu:26.04 AS gostprov
+# gost.so (engine mode) and gostprov.so (provider mode), both from gost-engine v3.0.5. 3.0.5 is the first release that
+# checks a GOST R 34.10-2012 public key lies in the prime-order subgroup (GHSA-c92j-m65q-j326), and its cmake floor is
+# OpenSSL 3.4, so this stage and the final one are 26.04 (OpenSSL 3.5). the provider is the build that reads the
+# CryptoPro proprietary pkcs12 PBE (1.2.840.113549.1.12.1.80)
+FROM ubuntu:26.04 AS gost
 
-ARG GOST_ENGINE_COMMIT=3dd0f0e4299489a537398cfa4d9daad260ac87a8
+ARG GOST_ENGINE_COMMIT=09fdd535fae018815651f34af6462fc280c3002e
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         build-essential cmake git pkg-config libssl-dev ca-certificates \
@@ -14,51 +15,32 @@ COPY patches/0001-cryptopro-keybag-empty-password.patch /tmp/
 # without the patch an empty-password pfx dies with a bare "Error outputting keys and certificates"
 WORKDIR /usr/src/gost-engine
 
+# cmake refuses to configure without OPENSSL_ROOT_DIR and OPENSSL_ENGINES_DIR. the engines dir is arch dependent, so it
+# is resolved here and /out is copied later. GOST_BUILD_ENGINE=ON fails the build instead of skipping gost.so when
+# libcrypto has no engine api
 RUN set -eux; \
     git clone https://github.com/gost-engine/engine.git .; \
     git checkout "${GOST_ENGINE_COMMIT}"; \
     git submodule update --init --recursive; \
     patch -p1 < /tmp/0001-cryptopro-keybag-empty-password.patch; \
-    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-Wno-error; \
-    cmake --build build --target gost_prov -j"$(nproc)"; \
-    test -f build/bin/gostprov.so
-
-
-# gost.so, engine mode, v3.0.3
-FROM ubuntu:24.04 AS engine
-
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        build-essential cmake git pkg-config libssl-dev ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN set -eux; \
-    git clone --branch v3.0.3 --depth 1 --recurse-submodules \
-        https://github.com/gost-engine/engine.git /usr/src/gost-engine; \
-    test -f /usr/src/gost-engine/libprov/include/prov/err.h
-
-# the engines dir is arch dependent, so it is resolved here and /out is copied later
-RUN set -eux; \
     enginesdir="$(pkg-config --variable=enginesdir libcrypto)"; \
-    cmake -S /usr/src/gost-engine -B /usr/src/gost-engine/build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_INSTALL_LIBDIR="lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)" \
-        -DOPENSSL_ENGINES_DIR="$enginesdir"; \
-    cmake --build /usr/src/gost-engine/build -j"$(nproc)"; \
-    DESTDIR=/staging cmake --install /usr/src/gost-engine/build; \
-    mkdir -p "/out$enginesdir"; \
-    cp "/staging$enginesdir/gost.so" "/out$enginesdir/gost.so"
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+        -DOPENSSL_ROOT_DIR=/usr -DOPENSSL_ENGINES_DIR="$enginesdir" -DGOST_BUILD_ENGINE=ON; \
+    cmake --build build --target gost_engine gost_prov -j"$(nproc)"; \
+    mkdir -p "/out$enginesdir" /out/usr/local/lib/ossl-modules; \
+    cp build/bin/gost.so "/out$enginesdir/gost.so"; \
+    cp build/bin/gostprov.so /out/usr/local/lib/ossl-modules/gostprov.so
 
 
 # assembly jar + a jlink runtime holding only the modules the jar actually reaches for
-FROM ubuntu:24.04 AS app
+FROM ubuntu:26.04 AS app
 
-ARG SBT_VERSION=1.12.15
-ARG SBT_SHA256=d8c215f47b879002a030f930410d83e9d138015362411f62e294c145b9f8a931
+ARG SBT_VERSION=2.0.11
+ARG SBT_SHA256=d8409a244e97c3839f27c4f435f49421196c126a450d30f4cf53522d39e3c379
 
 # binutils is for jlink --strip-debug, which shells out to objcopy for the native libraries
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        openjdk-21-jdk-headless binutils curl ca-certificates \
+        openjdk-25-jdk-headless binutils curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
@@ -75,17 +57,17 @@ COPY project/ project/
 COPY src/ src/
 
 RUN set -eux; \
-    /opt/sbt/bin/sbt -batch -Dsbt.color=false -Dsbt.supershell=false assembly; \
+    /opt/sbt/bin/sbt --server -batch -Dsbt.color=false -Dsbt.supershell=false assembly; \
     mkdir -p /opt/app; \
-    cp target/scala-*/gost-mtls-proxy.jar /opt/app/gost-mtls-proxy.jar
+    cp target/out/jvm/scala-*/gost-mtls-proxy/gost-mtls-proxy.jar /opt/app/gost-mtls-proxy.jar
 
 RUN set -eux; \
-    mods="$(jdeps --multi-release 21 --ignore-missing-deps --print-module-deps -q /opt/app/gost-mtls-proxy.jar)"; \
+    mods="$(jdeps --multi-release 25 --ignore-missing-deps --print-module-deps -q /opt/app/gost-mtls-proxy.jar)"; \
     echo "jlink modules: $mods"; \
     jlink --add-modules "$mods" --no-header-files --no-man-pages --strip-debug --compress=zip-6 --output /opt/jre
 
 
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 LABEL org.opencontainers.image.title="gost-mtls-proxy" \
       org.opencontainers.image.description="mTLS-terminating proxy for Russian GOST TLS endpoints (stunnel + gost-engine, fronted by an http4s Scala app)" \
@@ -108,8 +90,7 @@ RUN set -eux; \
     echo "" > /etc/apt/sources.list; \
     rm -rf /etc/apt/sources.list.d/*
 
-COPY --from=engine /out/ /
-COPY --from=gostprov /usr/src/gost-engine/build/bin/gostprov.so /usr/local/lib/ossl-modules/gostprov.so
+COPY --from=gost /out/ /
 COPY docker/gost.cnf /etc/ssl/gost.cnf
 COPY docker/gostprov.cnf /etc/ssl/gostprov.cnf
 
