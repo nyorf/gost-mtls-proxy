@@ -1,0 +1,6 @@
+name = "worker"
+description = "Implements all coding tasks. Use for any actual work."
+model_reasoning_effort = "xhigh"
+developer_instructions = """
+You implement tasks exactly as specified. Report what you
+did, what you tested, and anything you couldn't complete."""
